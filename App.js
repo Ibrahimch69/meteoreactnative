@@ -9,8 +9,8 @@ export default function App() {
   const [location, setLocation] = useState(null);
   const [errorMsg, setErrorMsg] = useState(null);
   const [temperature, setTemperature] = useState(null);
-  const [city, setCity] = useState(null);
-
+  const [forecast, setForecast] = useState(null);
+  
   const getWeatherData = async (latitude, longitude) => {
     const response = await axios.get(
       `https://api.openweathermap.org/data/2.5/weather?lat=${latitude}&lon=${longitude}&appid=${API_KEY}&units=metric`
@@ -18,25 +18,24 @@ export default function App() {
     return response.data.main.temp;
   };
 
+  const getWeatherForecast = async (latitude, longitude) => {
+    const response = await axios.get(
+      `https://api.openweathermap.org/data/2.5/forecast?lat=${latitude}&lon=${longitude}&appid=${API_KEY}&units=metric`
+    );
+    return response.data.list;
+  };
+
   const displayWeather = async () => {
     try {
       const { coords } = await Location.getCurrentPositionAsync({});
       const temp = await getWeatherData(coords.latitude, coords.longitude);
+      const forecastData = await getWeatherForecast(coords.latitude, coords.longitude);
       setTemperature(temp);
-  
-      const geo = await axios.get(
-        `https://maps.googleapis.com/maps/api/geocode/json?latlng=${coords.latitude},${coords.longitude}&key=VOTRE_CLE_API`
-      );
-      const cityName = geo.data.results[0].address_components[2].long_name;
-      setCity(cityName);
-  
-      console.log(temp, cityName);
+      setForecast(forecastData);
     } catch (error) {
       console.error(error);
     }
   };
-  
-  
 
   useEffect(() => {
     (async () => {
@@ -58,17 +57,28 @@ export default function App() {
   } else if (location) {
     text = JSON.stringify(location);
   }
+  
   return (
     <View style={styles.container}>
-      <Text>la ville est {city}</Text>
-      {city !== null && <Text>Bienvenue dans la ville de {city}</Text>}
       {temperature !== null && (
         <Text>La température actuelle est de {temperature}°C</Text>
+      )}
+      {forecast !== null && (
+        <View>
+          <Text>Prévisions météorologiques pour les 5 prochains jours:</Text>
+          {forecast.slice(0, 5).map((item, index) => {
+            const date = new Date(item.dt * 1000);
+            const dayOfWeek = date.toLocaleDateString('fr-FR', { weekday: 'long' });
+            const temperature = item.main.temp;
+            return (
+              <Text key={index}>{dayOfWeek}: {temperature}°C</Text>
+            );
+          })}
+        </View>
       )}
       <StatusBar style="auto" />
     </View>
   );
-  
 }
 
 const styles = StyleSheet.create({
